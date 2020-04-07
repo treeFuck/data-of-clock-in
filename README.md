@@ -1,19 +1,11 @@
 # data-of-clock-in
 
-## Project setup
-```
-npm install
-```
+## 项目介绍
+- 学校老师委托做的一个基于2020寒假学生在家安康打卡记录数据实现的分析监控平台。
+- 周期较短，一周速成
 
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
-
-### Compiles and minifies for production
-```
-npm run build
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+## 技术概要
+- vue
+- amap
+    + polyline实现飞线图
+    + heatmap大数据分析
