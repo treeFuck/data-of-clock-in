@@ -5,9 +5,10 @@ Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
-    polylineOption: {
-      
-    }
+    dateSelect: [],
+    reqUrl: 'http://39.98.41.126:10020',
+    lineArr: null,
+    selectLineIndex: null,
   },
   mutations: {
   },

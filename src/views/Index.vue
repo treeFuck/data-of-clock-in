@@ -7,6 +7,14 @@
   height: 100%;
   min-width: 1080px;
 }
+.amap-marker-label {
+  width: 60px;
+  border: none;
+  color: #fff;
+  background: none;
+  font-size: 15px;
+  text-align: center;
+}
 .con {
   position: relative;
   min-width: 1080px;
@@ -58,18 +66,6 @@
 .left .heatmap-show .no-see {
   background-image: url(../assets/no-see.png);
 }
-.left .search {
-  display: inline-block;
-  margin: 0 0.8em;
-  width: 20em;
-  height: 2.5em;
-  line-height: 2.6em;
-  cursor: pointer;
-  text-align: center;
-}
-.left .search .input {
-  box-shadow: 2px 2px 5px #666;
-}
 .right {
   position: absolute;
   top: 1em;
@@ -79,45 +75,7 @@
   width: 430px;
   box-shadow: 2px 2px 5px #666;
 }
-.right .stu-list {
-  position: absolute;
-  top: 10vh;
-  right: 0;
-}
-.right .stu-list .stu {
-  margin: 2em 0;
-  width: 430px;
-  overflow: hidden;
-  border-radius: 5px;
-  box-shadow: 2px 2px 5px #666;
-}
-.right .stu-list .stu .top {
-  padding: 0.5em 1em;
-  color: #fff;
-  text-align: left;
-  background: #7ba4fb;
-}
-.right .stu-list .stu .top .name{
-  display: block;
-  font-size: 18px;
-}
-.right .stu-list .stu .top .stu-id{
-  display: block;
-  font-size: 15px;
-}
-.right .stu-list .stu .transfer-info {
-  background: #fff;
-}
-.right .stu-list .stu .transfer-info div{
-  display: flex;
-  justify-content: space-between;
-  margin: 0 1em;
-  padding: 0 1em;
-  height: 2.5em;
-  line-height: 3em;
-  background: #fff;
-  border-bottom: 1px solid #666;
-}
+
 </style>
 <template>
   <div class="index">
@@ -131,37 +89,19 @@
           <div class="see" v-show="heatmapSee" @click="heatmapSee=false"></div>
           <div class="no-see" v-show="!heatmapSee" @click="heatmapSee=true"></div>
         </div>
-        <div class="search" v-show="pattern==1">
-          <Input class="input" search placeholder="Enter something..." v-model="searchStr" />
-        </div>
+        <search ref="search" v-show="pattern==1" @clickStu="clickStu"></search>
       </div>
       <div class="right">
         <div class="date-select">
           <DatePicker
             class="input"
-            v-model="dateSelect"
+            v-model="$store.state.dateSelect"
             type="daterange"
             placement="bottom-end"
             placeholder="Select date"
           ></DatePicker>
         </div>
-        <div class="stu-list" ref="stuList">
-          <div class="stu">
-            <div class="top">
-              <span class="name">蔡徐坤</span>
-              <span class="stu-id">3118004971</span>
-            </div>
-            <div class="transfer-info">
-              <div>
-                <span>2020-2-1</span>
-                <span>广州</span>
-              </div>
-              <div>
-                <span>2020-2-1</span>
-                <span>广州</span>
-              </div>
-            </div>
-          </div>
+          <stuList v-show="pattern==1" :stuList="stuListData"></stuList>
         </div>
       </div>
     </div>
@@ -169,20 +109,20 @@
 </template>
 
 <script>
+import search from '@/components/search.vue'
+import stuList from '@/components/stuList.vue'
+import markerIcon from "../assets/markerIcon.png";
 export default {
   data() {
     return {
       map: null,
-      pattern: -1, // 0-->热力图， 1-->飞线图，-1-->待选
-      searchStr: "",
-      dateSelect: [],
-      loading: false,
-
-      heatmap: null,
-      heatmapSee: false,
-
-      lineArr: null,
-      selectLineIndex: -1
+      pattern: -1,       // 0-->热力图， 1-->飞线图，-1-->待选
+      loading: false,    // loading界面
+      heatmapSee: false, // 显示heatmap还是marker
+      heatmapData: null, // 热力图数据（marker的数据）
+      heatmap: null,     // 热力图实例
+      markerList: null,  // marker实例数组
+      stuListData: null  // 右侧学生信息列表
     };
   },
   methods: {
@@ -194,8 +134,6 @@ export default {
       });
       this.map.plugin([
         "AMap.Heatmap",
-        "AMap.ElasticMarker",
-        "AMap.DistrictSearch",
         "AMap.PolyEditor"
       ]);
       let option = {
@@ -212,148 +150,229 @@ export default {
       this.heatmap = new AMap.Heatmap(this.map, option);
     },
     // 获取热力图
-    getHeatmap() {},
-    // 删除热力图
-    delHeatmap() {},
+    getHeatmapData() {
+      this.loading = true;
+      let date = this.handleTime(this.$store.state.dateSelect[0]);
+      this.$axios
+        .get(this.$store.state.reqUrl + "/api/student/heatMap"+ `?time=${date}`)
+        .then((res) => {
+          this.loading = false;
+          console.log(res.data);
+          if (res.data.code == 1) {
+            this.heatmapData = res.data.data;
+            this.getMarkerList();
+            if (this.heatmapSee) {
+              this.showHeatmap();
+            } else {
+              this.showMarkerList();
+            }
+          } else if (res.data.code == 3001) {
+            this.$Modal.warning({
+              title: '错误提示',
+              content: res.data.message
+            });
+            this.$router.replace({ name: "login" });
+          } else {
+            this.$Modal.warning({
+              title: '错误提示',
+              content: res.data.message
+            });
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          this.loading = false;
+        });
+    },
+    // 展示热力图
+    showHeatmap() {
+      if( !this.heatmap) {
+        return;
+      }
+      this.map.setZoomAndCenter(4, [116.2, 39.9]);
+      this.heatmap.show();
+      this.heatmap.setDataSet({ data: this.heatmapData });
+    },
+    // 隐藏热力图
+    hideHeatmap() {
+      if( !this.heatmap) {
+        return;
+      }
+      this.heatmap.hide();
+      this.heatmap.setDataSet({data: null})
+    },
+    // 获取标记点
+    getMarkerList() {
+      this.markerList = [];
+      let len = this.heatmapData.length;
+      for(let i = 0; i < len; i++) {
+        let lng = this.heatmapData[i].lng;
+        let lat = this.heatmapData[i].lat;
+        let startIcon = new AMap.Icon({
+            size: new AMap.Size(60, 76),
+            image: markerIcon,
+            imageSize: new AMap.Size(60, 76),
+        });
+        let marker = new AMap.Marker({
+          position: [lng, lat],
+          icon: startIcon,
+          offset: new AMap.Pixel(-30, -76)
+        });
+        marker.setLabel({
+          offset: new AMap.Pixel(0, 16),  //设置文本标注偏移量
+          content: `${this.heatmapData[i].count}人`, //设置文本标注内容
+          direction: 'right' //设置文本标注方位
+        });
+        this.markerList.push(marker);
+      }
+    },
+    // 显示标记点
+    showMarkerList() {
+      this.map.add(this.markerList);
+      this.map.setFitView();
+    },
+    // 隐藏标记点
+    hideMarkerList() {
+      if(!this.markerList) {
+        return;
+      }
+      this.map.remove(this.markerList);
+    },
     // 获取全部飞线
     getAllLine() {
       this.loading = true;
-      setTimeout(() => {
-        // 模拟请求
-        let dataArr = [
-          [
-            [113.31, 23.05],
-            [113.39, 23.05]
-          ],
-          [
-            [113.49, 23.05],
-            [113.39, 23.05]
-          ],
-          [
-            [113.31, 23.05],
-            [113.39, 23.05]
-          ],
-          [
-            [113.16, 23.8],
-            [113.39, 23.05]
-          ],
-          [
-            [112.99, 23.8],
-            [113.39, 23.05]
-          ],
-          [
-            [113.76, 22.99],
-            [113.39, 23.05]
-          ]
-        ];
-        this.lineArr = [];
-        for (let i = 0; i < dataArr.length; i++) {
+      let param = {
+        startTime: this.handleTime(this.$store.state.dateSelect[0]),
+	      endTime: this.handleTime(this.$store.state.dateSelect[1]),
+      };
+      this.$axios
+        .post(this.$store.state.reqUrl + "/api/student/migrate", param)
+        .then((res) => {
+          this.loading = false;
+          console.log(res.data);
+          if(res.data.code == 1) {
+            this.drawLine(res.data.data)
+          } else if(res.data.code == 3001) {
+            this.$Modal.warning({
+              title: '错误提示',
+              content: res.data.message
+            });
+            this.$router.replace({ name: "login" });
+          } else {
+            this.$Modal.warning({
+              title: '错误提示',
+              content: res.data.message
+            });
+          }
+          
+        })
+        .catch((err) => {
+          console.log(err);
+          this.loading = false;
+        });
+    },
+    drawLine(data) {
+      this.$store.state.lineArr = [];
+      let len1 = data.length;
+      let index = 0;
+      for(let i = 0; i < len1; i++) {
+        let migrate = data[i].migrate;
+        let len2 = migrate.length;
+        for(let j = 0; j < len2; j++) {
+          let pathStart = [migrate[j].from.lng, migrate[j].from.lat];
+          let pathEnd = [migrate[j].to.lng, migrate[j].to.lat];
           let polyline = new AMap.Polyline({
-            path: dataArr[i],
+            path: [pathStart, pathEnd],
             isOutline: true,
             outlineColor: "#fff",
-            borderWeight: 2,
-            strokeColor: "#000",
-            strokeWeight: 4,
+            borderWeight: 1,
+            strokeColor: "#666",
+            strokeWeight: 5,
             geodesic: true,
-            cursor: "pointer"
+            cursor: "pointer",
+            lineCap: "round"
           });
-          polyline.setMap(this.map);
-          // polyline.data = dataArr[i]
           polyline.data = {
-            index: i,
-            from: dataArr[i][0],
-            to: dataArr[i][1],
-            name: "张三" + i
+            index: index++,
+            from: pathStart,
+            to: pathEnd,
+            studentName: data[i].studentName
           };
-          // 线的点击事件
           polyline.on("click", event => {
             let polyline = event.target;
-            this.selectLineIndex = polyline.data.index;
+            this.$store.state.selectLineIndex = [polyline.data.index];
             this.getStuOfLine(polyline.data.from, polyline.data.to);
           });
-          // 缩放地图到合适的视野级别
-          this.lineArr.push(polyline);
+          this.$store.state.lineArr.push(polyline);
+          
         }
-        this.loading = false;
-        this.map.setFitView();
-      }, 1000);
+      }
+      this.map.add(this.$store.state.lineArr);
+      this.map.setFitView();
     },
     // 删除飞线
     delAllLine() {
-      if (!this.lineArr) {
+      if (!this.$store.state.lineArr) {
         return;
       }
-      this.map.remove(this.lineArr);
+      this.map.remove(this.$store.state.lineArr)
     },
     // 根据飞线获取对应迁移学生列表
     getStuOfLine(from, to) {
-
-      setTimeout(() => {
-        let data = [
+      this.stuListData = null;
+      console.log(from, to);
+      this.loading = true;
+      let param = {
+        startTime: this.handleTime(this.$store.state.dateSelect[0]),
+        endTime: this.handleTime(this.$store.state.dateSelect[1]),
+        place: [
           {
-            name: "张三",
-            stuId: "3118004333",
-            data: [
-              {
-                where: "北京",
-                start: "2020-4-1",
-                end: "2020-4-5"
-              },
-              {
-                where: "广州",
-                start: "2020-4-5",
-                end: "2020-4-9"
-              }
-            ]
+            "lng":from[0],
+            "lat":from[1]
           },
-          {
-            name: "李四",
-            stuId: "3118004444",
-            data: [
-              {
-                where: "北京",
-                start: "2020-4-1",
-                end: "2020-4-5"
-              },
-              {
-                where: "广州",
-                start: "2020-4-5",
-                end: "2020-4-9"
-              }
-            ]
+            {
+            "lng":to[0],
+            "lat":to[1]
           }
-        ];
-        let len = data.length;
-        let str = '';
-        for(let i = 0; i < len; i++) {
-          str += this.getStuHtml(data[i]);
-        }
-        this.$refs.stuList.innerHTML = str;
-      }, 1000);
+        ],
+      };
+      this.$axios
+        .post(this.$store.state.reqUrl + "/api/student/migrate", param)
+        .then((res) => {
+          this.loading = false;
+          console.log(res.data);
+          if(res.data.code == 1) {
+            this.stuListData = res.data.data;
+          } else if(res.data.code == 3001) {
+            this.$Modal.warning({
+              title: '错误提示',
+              content: res.data.message
+            });
+            this.$router.replace({ name: "login" });
+          } else {
+            this.$Modal.warning({
+              title: '错误提示',
+              content: res.data.message
+            });
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          this.loading = false;
+        });
     },
-    // 获取右侧显示迁移学生信息节点的html字符串
-    getStuHtml(data) {
-      let len  = data.data.length;
-      let transferInfoStr = '';
-      for(let i = 0; i < len; i++) {
-        transferInfoStr += `<div><span>${data.data[i].start} to ${data.data[i].end}</span><span>${data.data[i].where}</span></div>`;
-      }
-      let str =  `<div class="stu">
-          <div class="top">
-            <span class="name">${data.name}</span>
-            <span class="stu-id">${data.stuId}</span>
-          </div>
-          <div class="transfer-info">
-            ${transferInfoStr}
-          </div>
-        </div>`
-      return str;
-    },
-    // 模糊搜索
-    searchStu() {},
     // 搜索结果点击
-    clickStu() {},
+    clickStu(data) {
+      this.stuListData = [data];
+    },
+    // 清空地图样式
+    clearMap() {
+      this.$refs.search.searchStr = '';
+      this.stuListData = null;
+      this.delAllLine();
+      this.hideHeatmap();
+      this.hideMarkerList();
+    },
     // 格式化时间
     handleTime(date) {
       if (!date) {
@@ -366,48 +385,72 @@ export default {
     }
   },
   watch: {
-    searchStr(newVl, oldVl) {
-      //普通的watch监听
-      if (!oldVl || oldVl == newVl) {
-        return;
-      }
-      console.log("searchStr: ", newVl, oldVl);
-    },
-    dateSelect: {
-      //深度监听，可监听到对象、数组的变化
+    "$store.state.dateSelect": {
       handler(newVl, oldVl) {
         if (!oldVl) {
           return;
         }
         if (newVl[0] == "") {
           this.pattern = -1;
-          this.delAllLine();
+          this.clearMap();
         } else if (this.handleTime(newVl[0]) == this.handleTime(newVl[1])) {
           this.pattern = 0;
-          this.delAllLine();
+          this.clearMap();
+          this.getHeatmapData();
         } else {
           this.pattern = 1;
+          this.clearMap();
           this.getAllLine();
         }
       },
       deep: true //true 深度监听
     },
-    selectLineIndex(newVl, oldVl) {
-      //普通的watch监听
-      if (oldVl != -1) {
-        this.lineArr[oldVl].setOptions({
-          outlineColor: "#fff",
-          borderWeight: 2
-        });
+    "$store.state.selectLineIndex":{
+      handler(newVl, oldVl) {
+        if(!newVl) {
+          return;
+        }
+        let len1 = newVl.length;
+        console.log(newVl, oldVl)
+        for(let i = 0; i < len1; i++) {
+          this.$store.state.lineArr[newVl[i]].setOptions({
+            strokeColor: "#c23531",
+            zIndex: 200,
+          });
+        }
+        
+        if(!oldVl) {
+          return;
+        }
+        let len2 = oldVl.length;
+        for(let i = 0; i < len2; i++) {
+          this.$store.state.lineArr[oldVl[i]].setOptions({
+            strokeColor: "#666",
+            zIndex: 100,
+          });
+        }
+      },
+      deep: true //true 深度监听
+    },
+    heatmapSee(newVl, oldVl) {
+      if(this.pattern != 0) {
+        return;
       }
-      this.lineArr[newVl].setOptions({
-        outlineColor: "#f40",
-        borderWeight: 3
-      });
+      if(newVl) {
+        this.hideMarkerList();
+        this.showHeatmap();
+      } else {
+        this.hideHeatmap(); 
+        this.showMarkerList();
+      }
     }
   },
   mounted() {
     this.init();
+  },
+  components: {
+    search,
+    stuList
   }
 };
 </script>
