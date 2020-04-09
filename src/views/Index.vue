@@ -1,4 +1,4 @@
-<style scoped>
+<style>
 #map {
   position: absolute;
   left: 0;
@@ -15,7 +15,7 @@
   font-size: 15px;
   text-align: center;
 }
-.con {
+.index .con {
   position: relative;
   min-width: 1080px;
 }
