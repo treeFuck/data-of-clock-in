@@ -7,6 +7,14 @@ import 'view-design/dist/styles/iview.css';
 import echarts from 'echarts'
 import axios from 'axios'
 
+axios.interceptors.request.use(function (config) {
+	let token = localStorage.getItem('authorization');
+	if (token) {
+		config.headers['Authorization'] = token;
+	}
+	return config;
+})
+
 Vue.use(ViewUI);
 Vue.prototype.$echarts = echarts
 Vue.prototype.$axios = axios 
