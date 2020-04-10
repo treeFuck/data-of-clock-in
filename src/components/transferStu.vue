@@ -1,5 +1,5 @@
 <style scoped>
-.transfer-list {
+.transfer-stu {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -99,7 +99,7 @@
 }
 </style>
 <template >
-  <div class="transfer-list">
+  <div class="transfer-stu">
     <div class="title">
         <span>迁移列表</span>
         <img @click="colse" src="../assets/cuo.png">
@@ -150,7 +150,7 @@
 
 <script>
 export default {
-  name: "stuList",
+  name: "transferStu",
   props: {
     transferData: Array
   },

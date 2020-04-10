@@ -91,7 +91,7 @@
           <div class="see" v-show="heatmapSee" @click="heatmapSee=false"></div>
           <div class="no-see" v-show="!heatmapSee" @click="heatmapSee=true"></div>
         </div>
-        <search ref="search" v-show="pattern==1" @clickStu="clickStu"></search>
+        <search ref="search" v-show="pattern==1" @clickStu="clickStu" @setMigrateLine="setMigrateLine"></search>
       </div>
       <div class="right">
         <div class="date-select">
@@ -106,11 +106,11 @@
         </div>
         <stuList v-show="pattern==1" :stuList="stuListData"></stuList>
       </div>
-      <transferList
+      <transferStu
         @closeTransferList="closeTransferList"
         v-show="transferlistShow&&pattern==1"
         :transferData="transferData"
-      ></transferList>
+      ></transferStu>
       <unLockIn
         @closeUnLockInArr="closeUnLockInArr"
         v-show="unLockInShow"
@@ -121,16 +121,19 @@
 </template>
 
 <script>
+require("echarts-amap");
 import search from "@/components/search.vue";
 import stuList from "@/components/stuList.vue";
-import transferList from "@/components/transferList.vue";
+import transferStu from "@/components/transferStu.vue";
 import unLockIn from "@/components/unLockIn.vue";
 import importFile from "@/components/importFile.vue";
 import markerIcon from "../assets/markerIcon.png";
 export default {
   data() {
     return {
+      myChart: null,
       map: null,
+      layer: null,
       pattern: -1, // 0-->热力图， 1-->飞线图，-1-->待选
       loading: false, // loading界面
       heatmapSee: false, // 显示heatmap还是marker
@@ -142,6 +145,7 @@ export default {
       transferlistShow: false, // 迁移列表是否展示
       unLockInArr: null, // 打卡动态
       unLockInShow: false, // 打卡动态列表是否展示
+      migrateLine: false, // 是否显示迁移飞线图
       options: {
         disabledDate(date) {
           let bool =
@@ -155,11 +159,33 @@ export default {
   methods: {
     // 初始
     init() {
-      this.map = new AMap.Map("map", {
-        zoom: 12,
-        center: [113.39, 23.05],
-        mapStyle: "amap://styles/whitesmoke" //地图主题，
+      this.myChart = this.$echarts.init(document.getElementById("map"));
+      this.myChart.setOption({
+        amap: {
+          zoom: 12,
+          center: [113.39, 23.05],
+          mapStyle: "amap://styles/whitesmoke", //地图主题，
+        },
+        animation: false,
+        series: []
       });
+      this.map = this.myChart
+        .getModel()
+        .getComponent("amap")
+        .getAMap();
+      this.layer = this.myChart
+        .getModel()
+        .getComponent("amap")
+        .getLayer();
+      
+      this.layer.render = () => {
+        if(!this.migrateLine) {
+          return;
+        }
+        this.myChart.setOption({
+          series: this.$store.state.series
+        });
+      };
       this.map.plugin(["AMap.Heatmap", "AMap.PolyEditor"]);
     },
     // 获取打卡动态
@@ -360,7 +386,8 @@ export default {
             strokeWeight: 2,
             //geodesic: true,
             cursor: "pointer",
-            lineCap: "round"
+            lineCap: "round",
+            zIndex: -100
           });
           polyline.data = {
             index: index++,
@@ -370,6 +397,7 @@ export default {
           };
           polyline.on("click", event => {
             let polyline = event.target;
+            this.clearMigrateLine();
             this.$store.state.selectLineIndex = [polyline.data.index];
             this.getStuOfLine(polyline.data.from, polyline.data.to);
           });
@@ -434,6 +462,23 @@ export default {
     clickStu(data) {
       this.stuListData = [data];
     },
+    // 显示迁徙图
+    setMigrateLine() {
+      this.migrateLine = true;
+       this.layer.setzIndex(500);
+      this.$store.state.selectLineIndex = [-1];
+      this.myChart.setOption({
+        series: this.$store.state.series
+      });
+    },
+    // 清空迁徙图
+    clearMigrateLine() {
+      this.migrateLine = false;
+       this.layer.setzIndex(0);
+      this.myChart.setOption({
+        series: null
+      });
+    },
     // 清空地图样式
     clearMap() {
       this.$refs.search.searchStr = "";
@@ -442,6 +487,7 @@ export default {
       this.delAllLine();
       this.hideHeatmap();
       this.hideMarkerList();
+      this.clearMigrateLine();
     },
     closeTransferList() {
       this.transferlistShow = false;
@@ -492,18 +538,24 @@ export default {
         if (oldVl) {
           let len2 = oldVl.length;
           for (let i = 0; i < len2; i++) {
+            if(oldVl[i] < 0) {
+              continue;
+            }
             this.$store.state.lineArr[oldVl[i]].setOptions({
               strokeColor: "#acca64",
-              zIndex: 100
+              zIndex: 1
             });
           }
         }
         let len1 = newVl.length;
-        console.log(newVl, oldVl);
+        // console.log(newVl, oldVl);
         for (let i = 0; i < len1; i++) {
+          if(newVl[i]<0) {
+              continue;
+            }
           this.$store.state.lineArr[newVl[i]].setOptions({
             strokeColor: "#f40",
-            zIndex: 200
+            zIndex: 2
           });
         }
       },
@@ -535,9 +587,9 @@ export default {
   components: {
     search,
     stuList,
-    transferList,
+    transferStu,
     unLockIn,
-    importFile
+    importFile,
   }
 };
 </script>

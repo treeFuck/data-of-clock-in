@@ -67,7 +67,7 @@
           <div>搜索中……</div>
         </Spin>
       </div>
-      <div v-show="!resultList&&!loading" class="no-result" >暂无搜索结果</div>
+      <div v-show="!resultList&&!loading" class="no-result">暂无搜索结果</div>
       <div class="result" v-for="(data, index) in resultList" :key="index" @click="clickStu(data)">
         <span class="name">{{data.studentName}}</span>
         <span class="stu-id">{{data.studentId}}</span>
@@ -121,7 +121,7 @@ export default {
             }
           } else if (res.data.code == 3001) {
             this.$Modal.warning({
-              title: '错误提示',
+              title: "错误提示",
               content: res.data.message
             });
             this.$router.replace({ name: "login" });
@@ -136,25 +136,50 @@ export default {
     // 搜索结果点击
     clickStu(data) {
       this.$emit("clickStu", data);
-      this.markLine(data.studentName);
-      // this.searchStr = "";
-      // if(this.resultList) {
-      //   this.resultList = null;
-      // }
+      //this.markLine(data.studentName);
+      this.markLine2(data.migrate);
+      this.$emit("setMigrateLine");
+      
+      
+
+      this.searchStr = "";
+      if(this.resultList) {
+        this.resultList = null;
+      }
     },
-    // 给点击选择了的学生对应的迁移飞线标红
+    // (polyLine版)给点击选择了的学生对应的迁移飞线标红
     markLine(studentName) {
       let lineArr = this.$store.state.lineArr;
       let len = lineArr.length;
       let indexArr = [];
-      for(let i = 0; i < len; i++) {
-        if(lineArr[i].data.studentName == studentName) {
+      for (let i = 0; i < len; i++) {
+        if (lineArr[i].data.studentName == studentName) {
           indexArr.push(i);
         }
       }
-      console.log(indexArr)
+      console.log(indexArr);
       this.$store.state.selectLineIndex = indexArr;
-    }
+    },
+    // (飞线图版)给点击选择了的学生对应的迁移飞线标红
+    markLine2(migrate) {
+      let len = migrate.length;
+      let lineArr = [];
+      let effectScatterArr = [];
+      for (let j = 0; j < len; j++) {
+        let pathStart = [migrate[j].from.lng, migrate[j].from.lat];
+        let pathEnd = [migrate[j].to.lng, migrate[j].to.lat];
+        lineArr.push({
+          coords: [pathStart, pathEnd],
+          value: 1000
+        });
+        // effectScatterArr.push({
+        //   value: pathEnd
+        // });
+      }
+      this.$store.state.series[0].data = lineArr;
+      // this.$store.state.series[1].data = lineArr;
+      // this.$store.state.series[2].data = effectScatterArr;
+    },
   },
   watch: {
     searchStr(newVl, oldVl) {
@@ -163,7 +188,6 @@ export default {
       } else {
         this.resultList = null;
       }
-      
     }
   }
 };
