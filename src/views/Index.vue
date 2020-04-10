@@ -358,7 +358,7 @@ export default {
             // borderWeight: 1,
             strokeColor: "#acca64",
             strokeWeight: 2,
-            geodesic: true,
+            //geodesic: true,
             cursor: "pointer",
             lineCap: "round"
           });
@@ -523,7 +523,7 @@ export default {
     }
   },
   mounted() {
-    if (!localStorage.getItem("authorization")) {
+    if (!sessionStorage.getItem("authorization")) {
       this.$Modal.warning({
         title: "错误提示",
         content: "请先登录"

@@ -152,8 +152,8 @@ export default {
           console.log(res.data, res.headers.authorization);
           if (res.data.code == 1) {
             let authorization = res.headers.authorization;
-            localStorage.setItem('userName', this.username);
-            localStorage.setItem('authorization', authorization);
+            sessionStorage.setItem('userName', this.username);
+            sessionStorage.setItem('authorization', authorization);
             this.$router.replace({ name: "index" });
           } else {
             this.$Modal.warning({

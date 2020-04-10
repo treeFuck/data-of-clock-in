@@ -8,7 +8,7 @@ import echarts from 'echarts'
 import axios from 'axios'
 
 axios.interceptors.request.use(function (config) {
-	let token = localStorage.getItem('authorization');
+	let token = sessionStorage.getItem('authorization');
 	if (token) {
 		config.headers['Authorization'] = token;
 	}

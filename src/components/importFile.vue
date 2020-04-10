@@ -69,7 +69,7 @@ export default {
         async: true,
         headers:{
             // 'Content-Type': 'application/x-www-form-urlencoded',
-            "Authorization": localStorage.getItem("authorization")
+            "Authorization": sessionStorage.getItem("authorization")
         },
         success: (data)=> {
           if (data.code == 1) {

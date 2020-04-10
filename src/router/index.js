@@ -4,21 +4,21 @@ import index from '../views/Index.vue'
 
 Vue.use(VueRouter)
 
-  const routes = [
-    {
-      path: '/',
-      redirect: '/login'
-    },
-    {
-      path: '/index',
-      name: 'index',
-      component: index
-    },
-    {
-      path: '/login',
-      name: 'login',
-      component: () => import('../views/Login.vue')
-    }
+const routes = [
+  {
+    path: '/',
+    redirect: '/login'
+  },
+  {
+    path: '/index',
+    name: 'index',
+    component: index
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('../views/Login.vue')
+  }
 ]
 
 const router = new VueRouter({

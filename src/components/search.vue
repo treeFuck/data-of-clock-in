@@ -59,7 +59,7 @@
 </style>
 <template>
   <div class="search">
-    <Input class="input" search placeholder="Enter something..." v-model="searchStr" />
+    <Input class="input" search placeholder="输入姓名 / 学号" v-model="searchStr" />
     <div class="result-list" v-show="searchStr">
       <div class="load" v-show="loading">
         <Spin fix>
