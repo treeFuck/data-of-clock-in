@@ -117,11 +117,13 @@
         :unLockInArr="unLockInArr"
       ></unLockIn>
     </div>
+    <loading v-show="$store.state.loading"></loading>
   </div>
 </template>
 
 <script>
 require("echarts-amap");
+import loading from "@/components/loading.vue";
 import search from "@/components/search.vue";
 import stuList from "@/components/stuList.vue";
 import transferStu from "@/components/transferStu.vue";
@@ -135,7 +137,6 @@ export default {
       map: null,
       layer: null,
       pattern: -1, // 0-->热力图， 1-->飞线图，-1-->待选
-      loading: false, // loading界面
       heatmapSee: false, // 显示heatmap还是marker
       heatmapData: null, // 热力图数据（marker的数据）
       heatmap: null, // 热力图实例
@@ -187,18 +188,20 @@ export default {
         });
       };
       this.map.plugin(["AMap.Heatmap", "AMap.PolyEditor"]);
+
+      this.getUnLockInArr();
     },
     // 获取打卡动态
     getUnLockInArr() {
-      this.loading = true;
+      this.$store.state.loading = true;
       let param = {
-        startTime: this.handleTime(this.$store.state.dateSelect[0]),
-        endTime: this.handleTime(this.$store.state.dateSelect[1])
+        startTime: '2020-4-1',
+        endTime: this.handleTime(new Date())
       };
       this.$axios
         .post(this.$store.state.reqUrl + "/api/student/clock", param)
         .then(res => {
-          this.loading = false;
+          this.$store.state.loading = false;
           console.log(res.data);
           if (res.data.code == 1) {
             this.unLockInArr = res.data.data;
@@ -217,19 +220,19 @@ export default {
         })
         .catch(err => {
           console.log(err);
-          this.loading = false;
+          this.$store.state.loading = false;
         });
     },
     // 获取热力图
     getHeatmapData() {
-      this.loading = true;
+      this.$store.state.loading = true;
       let date = this.handleTime(this.$store.state.dateSelect[0]);
       this.$axios
         .get(
           this.$store.state.reqUrl + "/api/student/heatMap" + `?time=${date}`
         )
         .then(res => {
-          this.loading = false;
+          this.$store.state.loading = false;
           console.log(res.data);
           if (res.data.code == 1) {
             this.heatmapData = res.data.data;
@@ -260,7 +263,7 @@ export default {
         })
         .catch(err => {
           console.log(err);
-          this.loading = false;
+          this.$store.state.loading = false;
         });
     },
     // 展示热力图
@@ -330,7 +333,7 @@ export default {
     },
     // 获取全部飞线
     getAllLine() {
-      this.loading = true;
+      this.$store.state.loading = true;
       let param = {
         startTime: this.handleTime(this.$store.state.dateSelect[0]),
         endTime: this.handleTime(this.$store.state.dateSelect[1])
@@ -338,7 +341,7 @@ export default {
       this.$axios
         .post(this.$store.state.reqUrl + "/api/student/migrate", param)
         .then(res => {
-          this.loading = false;
+          this.$store.state.loading = false;
           console.log(res.data);
           if (res.data.code == 1) {
             this.transferData = res.data.data;
@@ -364,7 +367,7 @@ export default {
         })
         .catch(err => {
           console.log(err);
-          this.loading = false;
+          this.$store.state.loading = false;
         });
     },
     drawLine(data) {
@@ -418,7 +421,7 @@ export default {
     getStuOfLine(from, to) {
       this.stuListData = null;
       console.log(from, to);
-      this.loading = true;
+      //this.$store.state.loading = true;
       let param = {
         startTime: this.handleTime(this.$store.state.dateSelect[0]),
         endTime: this.handleTime(this.$store.state.dateSelect[1]),
@@ -436,7 +439,7 @@ export default {
       this.$axios
         .post(this.$store.state.reqUrl + "/api/student/migrate", param)
         .then(res => {
-          this.loading = false;
+          //this.$store.state.loading = false;
           console.log(res.data);
           if (res.data.code == 1) {
             this.stuListData = res.data.data;
@@ -455,7 +458,7 @@ export default {
         })
         .catch(err => {
           console.log(err);
-          this.loading = false;
+          //this.$store.state.loading = false;
         });
     },
     // 搜索结果点击
@@ -520,12 +523,12 @@ export default {
           this.pattern = 0;
           this.clearMap();
           this.getHeatmapData();
-          this.getUnLockInArr();
+          // this.getUnLockInArr();
         } else {
           this.pattern = 1;
           this.clearMap();
           this.getAllLine();
-          this.getUnLockInArr();
+          // this.getUnLockInArr();
         }
       },
       deep: true //true 深度监听
@@ -535,6 +538,7 @@ export default {
         if (!newVl) {
           return;
         }
+        console.log(newVl, oldVl);
         if (oldVl) {
           let len2 = oldVl.length;
           for (let i = 0; i < len2; i++) {
@@ -590,6 +594,7 @@ export default {
     transferStu,
     unLockIn,
     importFile,
+    loading
   }
 };
 </script>

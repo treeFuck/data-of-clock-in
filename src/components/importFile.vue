@@ -32,7 +32,7 @@
 <template>
   <div class="import-file">
     <span>导入数据</span>
-    <input type="file" @change="importFile" />
+    <input type="file" @change="importFile" multiple="multiple" />
   </div>
 </template>
 
@@ -41,24 +41,21 @@ import $ from "jquery";
 export default {
   methods: {
     importFile() {
-      var fileValue = event.target.value;
-      var extName = fileValue
-        .substring(fileValue.lastIndexOf("."))
-        .toLowerCase(); //（把路径中的所有字母全部转换为小写）
-      var AllImgExt = ".xls|.xlsx|";
-      if (AllImgExt.indexOf(extName + "|") == -1) {
-        let ErrMsg =
-          "该文件类型不允许上传。请上传 " +
-          AllImgExt +
-          " 类型的文件，当前文件类型为" +
-          extName;
-        alert(ErrMsg);
-        return;
+      let file = event.target.files;
+      let len = file.length;
+      let formdata = new window.FormData();
+      for (let i = 0; i < len; i++) {
+        let fileValue = file[i].name;
+        if (this.judge(file[i].name) !== 'OK') {
+          event.target.value = "";
+          return;
+        } else {
+          formdata.append("file", file[i], file[i].name);
+        }
       }
-      var file = event.target.files[0];
-      var formdata = new FormData();
-      formdata.append("file", file);
+      console.log(formdata.getAll("file"));
       event.target.value = "";
+      this.$store.state.loading=true;
       $.ajax({
         url: this.$store.state.reqUrl + "/api/student/import",
         method: "POST",
@@ -67,11 +64,11 @@ export default {
         processData: false,
         dataType: "json",
         async: true,
-        headers:{
-            // 'Content-Type': 'application/x-www-form-urlencoded',
-            "Authorization": sessionStorage.getItem("authorization")
+        headers: {
+          // 'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: sessionStorage.getItem("authorization")
         },
-        success: (data)=> {
+        success: data => {
           if (data.code == 1) {
             this.$Modal.info({
               title: "上传成功",
@@ -80,7 +77,7 @@ export default {
           } else if (data.code == 3001) {
             this.$Modal.warning({
               title: "错误提示",
-              content: '请先登录'
+              content: "请先登录"
             });
             this.$router.replace({ name: "login" });
           } else {
@@ -89,7 +86,20 @@ export default {
               content: data.message
             });
           }
+          this.$store.state.loading=false;
         }
+      });
+    },
+    judge(fileName) {
+      let AllImgExt = ".xls|.xlsx|";
+      var extName = fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
+      if (AllImgExt.indexOf(extName + "|") != -1) {
+        return 'OK';
+      }
+      let ErrMsg =`该文件类型不允许上传。请上传${AllImgExt}类型的文件，当前上传的文件有${extName}类型`
+      return this.$Modal.warning({
+        title: "错误提示",
+        content: ErrMsg
       });
     }
   }

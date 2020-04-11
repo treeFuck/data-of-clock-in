@@ -68,7 +68,8 @@ export default new Vuex.Store({
       //   },
       //   "data": null
       // }`
-    ]
+    ],
+    loading: false
   },
   mutations: {
   },

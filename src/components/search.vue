@@ -59,8 +59,16 @@
 </style>
 <template>
   <div class="search">
-    <Input class="input" search placeholder="输入姓名 / 学号" v-model="searchStr" />
-    <div class="result-list" v-show="searchStr">
+    <Input
+      class="input"
+      search
+      placeholder="输入姓名 / 学号"
+      v-model="searchStr"
+      clearable
+      @on-focus="onFocus"
+      @on-blur="onBlur"
+    />
+    <div class="result-list" v-show="searchStr&&focus">
       <div class="load" v-show="loading">
         <Spin fix>
           <Icon type="ios-loading" size="18" class="demo-spin-icon-load"></Icon>
@@ -86,10 +94,19 @@ export default {
     return {
       searchStr: "",
       resultList: null,
-      loading: false
+      loading: false,
+      focus: false
     };
   },
   methods: {
+    onFocus() {
+      this.focus= true;
+    },
+    onBlur() {
+      setTimeout(()=>{
+        this.focus= false;
+      }, 100)
+    },
     // 格式化时间
     handleTime(date) {
       if (!date) {
@@ -139,13 +156,11 @@ export default {
       //this.markLine(data.studentName);
       this.markLine2(data.migrate);
       this.$emit("setMigrateLine");
-      
-      
 
-      this.searchStr = "";
-      if(this.resultList) {
-        this.resultList = null;
-      }
+      // this.searchStr = "";
+      // if(this.resultList) {
+      //   this.resultList = null;
+      // }
     },
     // (polyLine版)给点击选择了的学生对应的迁移飞线标红
     markLine(studentName) {
@@ -179,7 +194,7 @@ export default {
       this.$store.state.series[0].data = lineArr;
       // this.$store.state.series[1].data = lineArr;
       // this.$store.state.series[2].data = effectScatterArr;
-    },
+    }
   },
   watch: {
     searchStr(newVl, oldVl) {
