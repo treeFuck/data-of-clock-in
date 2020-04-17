@@ -195,7 +195,7 @@ export default {
     getUnLockInArr() {
       this.$store.state.loading = true;
       let param = {
-        startTime: '2020-4-1',
+        startTime: '2020-1-1',
         endTime: this.handleTime(new Date())
       };
       this.$axios
@@ -244,6 +244,7 @@ export default {
             }
             this.getMarkerList();
             if (this.heatmapSee) {
+              this.map.setZoomAndCenter(4, [116.2, 39.9]);
               this.showHeatmap();
             } else {
               this.showMarkerList();
@@ -271,7 +272,7 @@ export default {
       if (!this.heatmap) {
         let option = {
           radius: 25,
-          opacity: [0, 0.5],
+          opacity: [0, 0.6],
           gradient: {
             0.5: "rgb(0, 0, 255)",
             0.65: "rgb(117, 211, 248)",
@@ -282,9 +283,9 @@ export default {
         };
         this.heatmap = new AMap.Heatmap(this.map, option);
       }
-      this.map.setZoomAndCenter(4, [116.2, 39.9]);
+      // this.map.setZoomAndCenter(4, [116.2, 39.9]);
       this.heatmap.show();
-      this.heatmap.setDataSet({ data: this.heatmapData });
+      this.heatmap.setDataSet({ data: this.heatmapData, max:80});
     },
     // 隐藏热力图
     hideHeatmap() {
@@ -322,7 +323,7 @@ export default {
     // 显示标记点
     showMarkerList() {
       this.map.add(this.markerList);
-      this.map.setFitView();
+      // this.map.setFitView();
     },
     // 隐藏标记点
     hideMarkerList() {
